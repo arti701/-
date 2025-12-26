@@ -31,7 +31,7 @@ int render(void){
 	for(a = 0; a < size; a++){
 			printf("._");
 			}
-	printf(". \n");
+	printf(". \n \n");
 	return 0;
 	}
 
@@ -60,13 +60,13 @@ int move( int who,  int x,  int y){ //x and y swapped so it looks more intuitive
 		if(has_won) return who + 20;
 		}
 	// not on a diagonal
-	//check vertical
+	//check vertical?
 	has_won = 1;
 	for(a = 0; a < size; a++){
 			if(grid[x][a] != who) has_won = 0;
 		}
 	if(has_won) return who + 30;
-	//check horizontal
+	//check horizontal?
 	has_won = 1;
 	for(a = 0; a < size; a++){
 			if(grid[a][y] != who) has_won = 0;
@@ -85,7 +85,7 @@ int move( int who,  int x,  int y){ //x and y swapped so it looks more intuitive
 	}
 
 
- int bot_move( int who){ //bot only cares about the current moment and calculates short term best point,, i think game's more fun that way
+int bot_move( int who){ //bot only cares about the current moment and calculates short term best point,, i think game's more fun that way
 	 char a; //direction, used to iterate through the surroundings of the iterated spot
 	int x_dir, x_l_dir; // x + direction, may be negative(although we woild want it to)
 	int y_dir, y_l_dir; //y + direction
@@ -141,6 +141,51 @@ int move( int who,  int x,  int y){ //x and y swapped so it looks more intuitive
 	}
 			
 			
+int settings(void){
+	int input_1 = 0;
+	printf("Current settings are: \n\t Players: ");
+	if(player[0] == 0){
+		printf(" human vs");}
+	else printf(" bot vs");
+	if(player[1] == 0){
+		printf(" human \n\t");}
+	else printf(" bot \n\t");
+	printf("Grid size is %d \n\t", size);
+	printf("\n Want to change the settings? Input \"1\" to do so or \"0\" to play\n");
+	scanf("%d", &input_1);
+	if(input_1 == 1){
+		
+		printf("\tPlayer 1 is a human(0) or a bot(1)? \n\t");
+		scanf("%d", &input_1);
+		while(input_1 != 0 && input_1 != 1){
+			printf("\tWrong value \n\t");
+			scanf("%d", &input_1);
+		}
+		player[0] = input_1;
+		
+		printf("\tPlayer 2 is a human(0) or a bot(1)? \n\t");
+		scanf("%d", &input_1);
+		while(input_1 != 0 && input_1 != 1){
+			printf("\tWrong value \n\t");
+			scanf("%d", &input_1);
+		}
+		player[1] = input_1;
+		
+		printf("\tWhat should the size of the grid be? (2-100) \n\t");
+		scanf("%d", &input_1);
+		while(input_1 < 2 || input_1 > 100){
+			printf("\tWrong value \n\t");
+			scanf("%d", &input_1);
+		}
+		size = input_1;
+		
+	}
+	else{
+	return 0;}
+}
+			
+			
+			
 int gameloop(void){
 	 int x, y;
 	 int turn;
@@ -162,7 +207,7 @@ int gameloop(void){
 			b_m = bot_move(turn);
 			x = b_m/100;
 			y = b_m%100;
-			printf("bot has chosen %d %d \n", x, y);
+			printf("bot (%d) has chosen spot %d %d \n", turn%2 + 1, x, y);
 			}
 		
 		// printf("%d %d %d \n", x, y, turn);
@@ -187,13 +232,13 @@ int gameloop(void){
 				}
 			else if(m_c / 10 == 3){
 				for(i=0; i < size; i++){
-					grid[y][i] = 5;
+					grid[x][i] = 5;
 					}
 				}
 				
 			else if(m_c / 10 == 4) {
 				for(i=0; i < size; i++){
-					grid[i][x] = 6;
+					grid[i][y] = 6;
 					}
 				}
 			else {printf("A DRAW(tie)!!!!!"); render(); break;}
@@ -205,12 +250,9 @@ int gameloop(void){
 		}
 	return 0;
 	}
-			
 		
 	
 int main(void){
-	printf("Input size:");
-	scanf("%d", &size);
 	render();
 	printf("pro tip: x is vertical, y is horizontal \n");
 	gameloop();
