@@ -1,27 +1,29 @@
 #include <stdio.h>
-#include <stdlib.h>
 
-unsigned int size;
-unsigned int grid[100][100] = {{0}}; //no variable size(((
+int size = 3;
+int grid[100][100] = {{0}}; //no variable size(((
 char symbols[7] = {' ', 'x', 'o', '\\', '/', '-', '|'};
-
+int player[2] = {0, 1};
+int foreseement[2] = {5, 5};
+int bot_type[2] = {0, 0};// for 2 bots there are 4 types of behaviour with 2 values in them
+const int type_data[4][2] = {{1,1}, {2, 1}, {1, 2}, {0, 0}};
 
 int render(void){
-	unsigned short int i;
-	unsigned short int j;
-	unsigned int a;
-	printf("  ");
+	 short int i;
+	 short int j;
+	 int a;
+	printf("\n  ");
 	for(a = 0; a < size; a++){
-		if (a<10) {printf(" %u", a);}
-		else {printf("%u", a);}}
+		if (a<10) {printf(" %d", a);}
+		else {printf("%d", a);}}
 	printf("\n");
 	for(i = 0; i < size; i++){
 		printf("  ");
 		for(a = 0; a < size; a++){
 			printf("._");
 			}
-		if (i<10) {printf(".\n %u", i);}
-		else {printf(".\n%u", i);}
+		if (i<10) {printf(".\n %d", i);}
+		else {printf(".\n%d", i);}
 		for(j = 0; j < size; j++){
 			printf("|%c", symbols[grid[i][j]]);
 			}
@@ -31,18 +33,18 @@ int render(void){
 	for(a = 0; a < size; a++){
 			printf("._");
 			}
-	printf(". \n");
+	printf(". \n \n");
 	return 0;
 	}
 
-int move(unsigned int who, unsigned int y, unsigned int x){
-	unsigned short int a;
-	unsigned short int b;
-	unsigned char has_won;
+int move( int who,  int x,  int y){ //x and y swapped so it looks more intuitive, should probably switch to letter system but oh well there's only so much letters <<< WHY DID I DO THIS I"M GONNA KMS I WAS SO FLUFFING ENRAGED WHEN IT HAPPENED (and now it works perfectly???
+	 short int a;
+	 short int b;
+	 char has_won;
 	//input check returned value being > 100 means error
 	if(x >= size || y >= size) return 101; //wrong coords
 	if(who != 1 && who != 2) return 102; // wrong person
-	if(grid[x][y] != 0) return 103; // spot taken
+	if(grid[x][y] != 0) {return 103;} // spot taken
 	grid[x][y] = who;
 	//win condition check, 1 or 2 means win
 	if(x == y){//diagonal topleft
@@ -60,13 +62,13 @@ int move(unsigned int who, unsigned int y, unsigned int x){
 		if(has_won) return who + 20;
 		}
 	// not on a diagonal
-	//check vertical
+	//check vertical?
 	has_won = 1;
 	for(a = 0; a < size; a++){
 			if(grid[x][a] != who) has_won = 0;
 		}
 	if(has_won) return who + 30;
-	//check horizontal
+	//check horizontal?
 	has_won = 1;
 	for(a = 0; a < size; a++){
 			if(grid[a][y] != who) has_won = 0;
@@ -84,29 +86,112 @@ int move(unsigned int who, unsigned int y, unsigned int x){
 	return 0;
 	}
 
+
+ int bot_move( int who, int frsm){ //bot only cares about the current moment and calculates short term best point,, i think game's more fun that way
+	int i;//iteration
+	 char a; //direction, used to iterate through the surroundings of the iterated spot
+	int x_dir[100]; // x + direction (for a while), may be negative(although we woild want it to)
+	int y_dir[100];
+	 int x, y; // iterated spot
+	 int saved_spot; // currently chosen spot
+	short int pref, saved_pref; // how preferable iterated/chosen spot is, used to campare them
+	saved_spot = 0; // hopefully it will change, i'm not sure how it will be handled
+	saved_pref = -1;
+	for(x=0; x < size; x++){
+		for(y=0;y<size; y++){
+			pref = 0; //restart pref for this spot
+			for(a=0; a<8; a++){
+				y_dir[0] = y - 1 + a%3;
+				for(i = 1; i < frsm; i++){
+					y_dir[i] = y + (i+1)*(y + y_dir[0]);
+				}
+				if(a<3){//top row
+					x_dir[0] = x - 1;
+					for(i = 1; i < frsm; i++){
+						x_dir[i] = x - i - 1;
+					}
+				}
+				else if (a > 5){//bottom row
+					x_dir[0] = x + 1;
+					for(i = 1; i < frsm; i++){
+						x_dir[i] = x + i + 1;
+					}}
+				else if(a == 4){//middle spot, we don't care
+					continue;}
+				else{for(i = 0; i < frsm; i++){
+						x_dir[i] = x;
+					}}//middle row
+				//printf("a a is %d xd is %d yd is %d xld is %d yld is %d x is %d y is %d\n", a, x_dir, y_dir, x_l_dir, y_l_dir, x, y);
+				if(x_dir[0] < 0 || x_dir[0] >= size || y_dir[0] < 0 || y_dir[0] >= size){//out of reach
+					continue;}
+				for(i = 1; i < frsm; i++){
+					if(x_dir[i] < 0 || x_dir[i] >= size){x_dir[i] = 999;}
+					if(y_dir[i] < 0 || y_dir[i] >= size){y_dir[i] = 999;}
+				}
+				
+				//printf("b a is %d xd is %d yd is %d xld is %d yld is %d\n", a, x_dir, y_dir, x_l_dir, y_l_dir);
+				
+				for(i = 0; i < frsm; i++){ //check rows of self(defensive)
+					if(x_dir[i] != 999 && y_dir[i] != 999 && grid[x_dir[i]][y_dir[i]] == who){pref += (i*2+1) * type_data[bot_type[who-1]][0];} //stacking rows is linearly gooder every check
+					else break;
+				}
+				for(i = 0; i < frsm; i++){// offensive
+					if(x_dir[i] != 999 && y_dir[i] != 999 && grid[x_dir[i]][y_dir[i]] == ((who + 1) % 2)+1){pref += (i*2+1) * type_data[bot_type[who-1]][1];}
+					else break;
+				}
+				
+				//printf(" pref is %d\n", pref);
+				}//we are done with iterating this spot's surroundings, let's see if we like it
+			if((saved_pref < pref && grid[x][y] == 0) || grid[saved_spot / 100][saved_spot % 100] !=0){
+				//printf("pref saved\n");
+				saved_pref = pref;
+				saved_spot = x * 100 + y;}//we need to store two values in one int
+			}
+		}
+	// printf("grid value %d x %d y %d\n", grid[saved_spot/100][saved_spot%100], saved_spot/100, saved_spot%100);
+	if(grid[saved_spot/100][saved_spot%100] !=0 || bot_type[who - 1] == 3){
+		//printf("Entered failstate on %d %d \n", saved_spot/100, saved_spot%100);
+		for(x=0; x<size; x++){
+			for(y=0; y<size; y++){
+				if(grid[x][y] == 0) return x * 100 + y;
+			}
+		}
+	}
+	// printf("pref is %d\n", saved_pref);
+	return saved_spot;
+	}
 			
 			
 int gameloop(void){
-	unsigned int x, y;
-	unsigned int turn;
-	unsigned short int i;
+	 int x, y;
+	 int turn;
+	 short int i;
 	int m_c;
+	 int b_m;
 	turn = 0;
 	while (1) {
-		printf("x:");
-		scanf("%u", &x);
-		printf("y:");
-		scanf("%u", &y);
-		if(x >= size || y >= size){
-			printf("Unacceptable value \n");
-			continue;
+		if(player[turn%2] == 0){
+			printf("x:");
+			scanf("%d", &x);
+			printf("y:");
+			scanf("%d", &y);
+			if(x >= size || y >= size){
+				printf("Unacceptable values \n");
+				continue;}
+			}
+		else{
+			b_m = bot_move(turn, foreseement[turn%2]);
+			x = b_m/100;
+			y = b_m%100;
+			printf("bot (%d) has chosen spot %d %d \n", turn%2 + 1, x, y);
 			}
 		
-		// printf("%u %u %u \n", x, y, turn);
+		// printf("%d %d %d \n", x, y, turn);
 		m_c = move(turn % 2 + 1, x, y);
 		if(m_c > 100){
 			if(m_c == 103){
 				printf("Input error: spot already taken \n");
+				//printf("FKLJSH %d %d\n",grid[b_m/100][b_m%100], b_m);
 				}
 			else {printf("This error really shouldn't have happened... code %d \n", m_c);}
 			}
@@ -142,15 +227,93 @@ int gameloop(void){
 	return 0;
 	}
 	
-	
-	
+int settings(void){
+	int input_1 = 0;
+	printf("Current settings are: \n\t Players: ");
+	if(player[0] == 0){
+		printf(" human vs");}
+	else printf(" bot vs");
+	if(player[1] == 0){
+		printf(" human \n\t");}
+	else printf(" bot \n\t");
+	printf("Grid size is %d \n\t", size);
+	printf("Bots' point stacking max coefficients are %d and %d\n", foreseement[0], foreseement[1]);
+	printf("\n Want to change the settings? Input \"1\" to do so or \"0\" to play\n");
+	scanf("%d", &input_1);
+	if(input_1 == 1){
+		
+		printf("\tPlayer 1 is a human(0) or a bot(1)? \n\t");
+		scanf("%d", &input_1);
+		while(input_1 != 0 && input_1 != 1){
+			printf("\tWrong value \n\t");
+			scanf("%d", &input_1);
+		}
+		player[0] = input_1;
+		
+		printf("\tPlayer 2 is a human(0) or a bot(1)? \n\t");
+		scanf("%d", &input_1);
+		while(input_1 != 0 && input_1 != 1){
+			printf("\tWrong value \n\t");
+			scanf("%d", &input_1);
+		}
+		player[1] = input_1;
+		
+		printf("\tWhat should the size of the grid be? (2-100) \n\t");
+		scanf("%d", &input_1);
+		while(input_1 < 2 || input_1 > 100){
+			printf("\tWrong value \n\t");
+			scanf("%d", &input_1);
+		}
+		size = input_1;
+		
+		printf("Whant to enter AI settings?(1 for yes)\n");
+		scanf("%d", &input_1);
+		if(input_1 == 1){
+		
+			printf("\t\tWhat's first bot's max points coefficient? (1-100) \n\t\t");
+			scanf("%d", &input_1);
+			while(input_1 < 1 || input_1 > 100){
+				printf("\t\tWrong value \n\t\t");
+				scanf("%d", &input_1);
+			}
+			foreseement[0] = input_1;
+			
+			printf("\t\tWhat's second bot's max points coefficient? (1-100) \n\t\t");
+			scanf("%d", &input_1);
+			while(input_1 < 1 || input_1 > 100){
+				printf("\t\tWrong value \n\t\t");
+				scanf("%d", &input_1);
+			}
+			foreseement[1] = input_1;
+			
+			printf("\t\tWhat's first bot's type?\n \t \t \t Neutral - 0, Defensive - 1, Offensive - 2, Mindless - 3 \n\t\t");
+			scanf("%d", &input_1);
+			while(input_1 < 0 || input_1 > 3){
+				printf("\t\tWrong value \n\t\t");
+				scanf("%d", &input_1);
+			}
+			bot_type[0] = input_1;
+			
+			printf("\t\tWhat's second bot's type?\n \t \t \t Neutral - 0, Defensive - 1, Offensive - 2, Mindless - 3\n\t\t");
+			scanf("%d", &input_1);
+			while(input_1 < 0 || input_1 > 3){
+				printf("\t\tWrong value \n\t\t");
+				scanf("%d", &input_1);
+			}
+			bot_type[1] = input_1;
+			
+			
+		}
+	}
+	else{
+	return 0;}
+}
 			
 		
 	
 int main(void){
-	printf("Input size:");
-	scanf("%d", &size);
+	settings();
 	render();
-	printf("pro tip: x is horizontal, y is verical \n");
+	printf("pro tip: x is vertical, y is horizontal \n");
 	gameloop();
 	return 0;}
