@@ -1,9 +1,14 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <time.h>
 
 unsigned int size;
 unsigned int grid[100][100] = {{0}}; //no variable size(((
 char symbols[7] = {' ', 'x', 'o', '\\', '/', '-', '|'};
+char player[2] = {0, 1};
+int bot_ramdonness = 40;
 
 
 int render(void){
@@ -35,7 +40,7 @@ int render(void){
 	return 0;
 	}
 
-int move(unsigned int who, unsigned int y, unsigned int x){
+int move(unsigned int who, unsigned int y, unsigned int x){ //x and y swapped so it looks more intuitive, should probably switch to letter system but oh well there's only so much letters
 	unsigned short int a;
 	unsigned short int b;
 	unsigned char has_won;
@@ -84,6 +89,40 @@ int move(unsigned int who, unsigned int y, unsigned int x){
 	return 0;
 	}
 
+
+unsigned int bot_move(unsigned int who){ //bot only cares about the current moment and calculates short term best point,, i think game's more fun that way
+	unsigned char a; //direction, used to iterate through the surroundings of the iterated spot
+	int x_dir; // x + direction, may be negative(although we woild want it to)
+	int y_dir; //y + direction
+	unsigned int x, y; // iterated spot
+	unsigned int saved_spot; // currently chosen spot
+	short int pref, saved_pref; // how preferable iterated/chosen spot is, used to campare them
+	saved_spot = 0; // hopefully it will change, i'm not sure how it will be handled
+	saved_pref = -1;
+	for(x=0; x < size; x++){
+		for(y=0;y<size; y++){
+			pref = 0; //restart pref for this spot
+			for(a=0; a<8; a++){
+				x_dir = x - 1 + a%3;
+				if(a<3){//top row
+					y_dir = y - 1;}
+				else if (a > 6){//bottom row
+					y_dir = y + 1;}
+				else if(a == 5){//middle spot, we don't care
+					continue;}
+				else{y_dir = y;}//middle row
+				if(x_dir < 0 || x_dir >= size || y_dir < 0 || y_dir >= size){//out of reach
+					continue;}
+				if(grid[x_dir][y_dir] == who){pref += 2;}// bot likes when there are it's symbols nearby
+				else if(grid[x_dir][y_dir] == (who + 1) % 2){pref += 1;}// it also likes to block other's move, but less
+				}//we are done with iterating this spot's sirroundings, let's see if we like it
+			if((saved_pref <= pref && rand()%100 < bot_ramdonness) || grid[saved_spot / 100][saved_spot % 100] !=0){//we may randomly chose a different, equally preferable spot, so there's less bias towards leftmost corner, also don't choose the taken spot
+				saved_pref = pref;
+				saved_spot = x * 100 + y;}//we need to store two values in one
+			}
+		}
+	return saved_spot;
+	}
 			
 			
 int gameloop(void){
@@ -91,15 +130,24 @@ int gameloop(void){
 	unsigned int turn;
 	unsigned short int i;
 	int m_c;
+	unsigned int b_m;
 	turn = 0;
+	srand(time(NULL));
 	while (1) {
-		printf("x:");
-		scanf("%u", &x);
-		printf("y:");
-		scanf("%u", &y);
-		if(x >= size || y >= size){
-			printf("Unacceptable value \n");
-			continue;
+		if(player[turn%2] == 0){
+			printf("x:");
+			scanf("%u", &x);
+			printf("y:");
+			scanf("%u", &y);
+			if(x >= size || y >= size){
+				printf("Unacceptable value \n");
+				continue;}
+			}
+		else{
+			b_m = bot_move(turn);
+			x = b_m / 100;
+			y = b_m % 100;
+			printf("bot has chosen %u %u \n", x, y);
 			}
 		
 		// printf("%u %u %u \n", x, y, turn);
@@ -141,11 +189,7 @@ int gameloop(void){
 		}
 	return 0;
 	}
-	
-	
-	
-			
-		
+
 	
 int main(void){
 	printf("Input size:");
